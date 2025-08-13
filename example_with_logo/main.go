@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/jpeg"
 	"image/png"
 	"log"
 	"os"
@@ -10,8 +11,12 @@ import (
 )
 
 func main() {
-	// Load the logo image (we'll use a simple black square as placeholder)
-	logo := createSimpleLogo()
+	// Load the logo image from res/goqrlogp.jpg
+	logo, err := loadLogo()
+	if err != nil {
+		log.Printf("Could not load logo from res/goqrlogp.jpg, using simple placeholder: %v", err)
+		logo = createSimpleLogo()
+	}
 
 	// Create a QR code with Chrome-style appearance and logo
 	qr, err := myqrcode.New("https://meet.google.com/abc-defg-hij", myqrcode.High)
@@ -28,12 +33,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Configure Chrome-style rendering with circular dots
+	// Configure Chrome-style rendering with circular dots using new module drawer system
 	config := myqrcode.StyleConfig{
-		ModuleSize:      8,
-		QuietZone:       32,
-		RoundedCorners:  true,
-		CircularDots:    true,
+		ModuleSize:       10,
+		QuietZone:        4,
+		RoundedCorners:   true,
+		CircularDots:     true,
+		BackgroundColor:  myqrcode.DefaultStyleConfig().BackgroundColor,
+		ForegroundColor:  myqrcode.DefaultStyleConfig().ForegroundColor,
+		ModuleDrawer:     myqrcode.NewCircleModuleDrawer(), // Use the new circular module drawer
 	}
 
 	// Generate the image
@@ -61,13 +69,28 @@ func createSimpleLogo() image.Image {
 	// Create a simple 32x32 logo (placeholder)
 	size := 32
 	img := image.NewRGBA(image.Rect(0, 0, size, size))
-	
+
 	// Fill with black to simulate a simple logo
 	for y := 8; y < size-8; y++ {
 		for x := 8; x < size-8; x++ {
 			img.Set(x, y, image.Black)
 		}
 	}
-	
+
 	return img
+}
+
+func loadLogo() (image.Image, error) {
+	file, err := os.Open("res/goqrlogp.jpg")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	
+	img, err := jpeg.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+	
+	return img, nil
 }

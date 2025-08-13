@@ -6,70 +6,86 @@ import (
 
 func addErrorCorrection(data []int, version int, level ErrorCorrectionLevel) []byte {
 	info := getVersionInfo(version)
-	
-	ecCodewords := info.ECCodewordsPerBlock[level]
-	dataCodewords := info.DataCodewordsPerBlock[level]
-	numBlocks := info.NumBlocks[level]
-	
+	blockInfo := info.ECBlockInfo[level]
+
 	dataBits := bitsToBytes(data)
-	
-	if len(dataBits) > dataCodewords*numBlocks {
-		dataBits = dataBits[:dataCodewords*numBlocks]
+
+	var dataBlocks [][]byte
+	var ecBlocks [][]byte
+	offset := 0
+
+	totalDataCodewords := 0
+	for _, group := range blockInfo {
+		totalDataCodewords += group.NumBlocks * group.DataCodewords
 	}
-	
-	for len(dataBits) < dataCodewords*numBlocks {
+
+	if len(dataBits) > totalDataCodewords {
+		dataBits = dataBits[:totalDataCodewords]
+	}
+
+	for len(dataBits) < totalDataCodewords {
 		dataBits = append(dataBits, 0)
 	}
-	
+
+	for _, group := range blockInfo {
+		for i := 0; i < group.NumBlocks; i++ {
+			dataCodewords := group.DataCodewords
+			ecCodewords := group.TotalCodewords - dataCodewords
+
+			blockData := make([]byte, dataCodewords)
+			copy(blockData, dataBits[offset:offset+dataCodewords])
+			offset += dataCodewords
+
+			dataBlocks = append(dataBlocks, blockData)
+			ecBlocks = append(ecBlocks, generateErrorCorrection(blockData, ecCodewords))
+		}
+	}
+
 	var allCodewords []byte
-	
-	dataBlocks := make([][]byte, numBlocks)
-	ecBlocks := make([][]byte, numBlocks)
-	
-	for i := 0; i < numBlocks; i++ {
-		start := i * dataCodewords
-		end := start + dataCodewords
-		if end > len(dataBits) {
-			end = len(dataBits)
+	maxDataLen := 0
+	for _, block := range dataBlocks {
+		if len(block) > maxDataLen {
+			maxDataLen = len(block)
 		}
-		
-		blockData := make([]byte, dataCodewords)
-		copy(blockData, dataBits[start:end])
-		dataBlocks[i] = blockData
-		
-		ecBlocks[i] = generateErrorCorrection(blockData, ecCodewords)
 	}
-	
-	for i := 0; i < dataCodewords; i++ {
-		for j := 0; j < numBlocks; j++ {
-			if i < len(dataBlocks[j]) {
-				allCodewords = append(allCodewords, dataBlocks[j][i])
+
+	for i := 0; i < maxDataLen; i++ {
+		for _, block := range dataBlocks {
+			if i < len(block) {
+				allCodewords = append(allCodewords, block[i])
 			}
 		}
 	}
-	
-	for i := 0; i < ecCodewords; i++ {
-		for j := 0; j < numBlocks; j++ {
-			if i < len(ecBlocks[j]) {
-				allCodewords = append(allCodewords, ecBlocks[j][i])
+
+	maxEcLen := 0
+	for _, block := range ecBlocks {
+		if len(block) > maxEcLen {
+			maxEcLen = len(block)
+		}
+	}
+
+	for i := 0; i < maxEcLen; i++ {
+		for _, block := range ecBlocks {
+			if i < len(block) {
+				allCodewords = append(allCodewords, block[i])
 			}
 		}
 	}
-	
+
 	return allCodewords
 }
 
 func generateErrorCorrection(data []byte, ecCodewords int) []byte {
 	// Create QR code Galois Field (polynomial 0x11d, generator 2)
 	field := gf256.NewField(0x11d, 2)
-	
+
 	// Create Reed-Solomon encoder
 	encoder := gf256.NewRSEncoder(field, ecCodewords)
-	
+
 	// Generate error correction bytes
 	result := make([]byte, ecCodewords)
 	encoder.ECC(data, result)
-	
+
 	return result
 }
 
@@ -77,7 +93,7 @@ func bitsToBytes(bits []int) []byte {
 	for len(bits)%8 != 0 {
 		bits = append(bits, 0)
 	}
-	
+
 	bytes := make([]byte, len(bits)/8)
 	for i := 0; i < len(bytes); i++ {
 		for j := 0; j < 8; j++ {
@@ -86,7 +102,7 @@ func bitsToBytes(bits []int) []byte {
 			}
 		}
 	}
-	
+
 	return bytes
 }
 

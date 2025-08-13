@@ -11,7 +11,7 @@ import (
 // TestQRCodeReadability tests if generated QR codes are actually readable
 func TestQRCodeReadability(t *testing.T) {
 	os.Mkdir("readability_tests", 0755)
-	
+
 	testCases := []struct {
 		name        string
 		data        string
@@ -186,10 +186,10 @@ func TestMinimalQRCode(t *testing.T) {
 
 	// Generate ultra-basic rendering
 	config := StyleConfig{
-		ModuleSize: 20, // Large modules for easier scanning
-		QuietZone:  80, // Large quiet zone
+		ModuleSize:     20, // Large modules for easier scanning
+		QuietZone:      80, // Large quiet zone
 		RoundedCorners: false,
-		CircularDots: false,
+		CircularDots:   false,
 	}
 
 	img, err := qr.ToImage(config)
@@ -258,8 +258,8 @@ func sanitizeFilename(filename string) string {
 	// Replace spaces and special characters for valid filenames
 	result := ""
 	for _, char := range filename {
-		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-		   (char >= '0' && char <= '9') || char == '_' || char == '.' {
+		if (char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '_' || char == '.' {
 			result += string(char)
 		} else {
 			result += "_"
@@ -270,7 +270,7 @@ func sanitizeFilename(filename string) string {
 
 func saveReadabilityTest(t *testing.T, img image.Image, filename string) {
 	os.Mkdir("readability_tests", 0755)
-	
+
 	file, err := os.Create("readability_tests/" + filename)
 	if err != nil {
 		t.Logf("Could not create readability test file %s: %v", filename, err)

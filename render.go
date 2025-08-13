@@ -13,59 +13,78 @@ func (qr *QRCode) ToImage(config StyleConfig) (image.Image, error) {
 	if qr.Matrix == nil {
 		return nil, errors.New("QR code not encoded")
 	}
-	
+
+	// Validate and set defaults
 	moduleSize := config.ModuleSize
 	if moduleSize <= 0 {
 		moduleSize = 8
 	}
-	
+
 	quietZone := config.QuietZone
 	if quietZone <= 0 {
 		quietZone = 4 * moduleSize
 	}
-	
-	imgSize := qr.Size*moduleSize + 2*quietZone
-	img := image.NewRGBA(image.Rect(0, 0, imgSize, imgSize))
-	
-	// Fill background
-	bg := config.BackgroundColor
-	if bg == nil {
-		bg = color.RGBA{255, 255, 255, 255}
+
+	// Set default colors if not provided
+	if config.BackgroundColor == nil {
+		config.BackgroundColor = color.RGBA{255, 255, 255, 255}
 	}
-	draw.Draw(img, img.Bounds(), &image.Uniform{bg}, image.Point{}, draw.Src)
-	
-	// Draw QR modules
-	fg := config.ForegroundColor
-	if fg == nil {
-		fg = color.RGBA{0, 0, 0, 255}
+	if config.ForegroundColor == nil {
+		config.ForegroundColor = color.RGBA{0, 0, 0, 255}
 	}
-	
-	for y := 0; y < qr.Size; y++ {
-		for x := 0; x < qr.Size; x++ {
-			if qr.Matrix[y][x] {
-				imgX := quietZone + x*moduleSize
-				imgY := quietZone + y*moduleSize
-				
-				if config.CircularDots {
-					drawCircle(img, imgX, imgY, moduleSize, fg)
-				} else if config.RoundedCorners && isFinderPattern(x, y, qr.Size) {
-					drawRoundedFinderPattern(img, imgX, imgY, moduleSize, fg, x, y, qr.Size)
-				} else if config.RoundedCorners {
-					drawRoundedModule(img, imgX, imgY, moduleSize, fg)
-				} else {
-					rect := image.Rect(imgX, imgY, imgX+moduleSize, imgY+moduleSize)
-					draw.Draw(img, rect, &image.Uniform{fg}, image.Point{}, draw.Src)
-				}
-			}
+
+	// Set default module drawer if not provided
+	drawer := config.ModuleDrawer
+	if drawer == nil {
+		if config.CircularDots {
+			drawer = NewCircleModuleDrawer()
+		} else if config.RoundedCorners {
+			drawer = NewRoundedModuleDrawer(1.0)
+		} else {
+			drawer = NewSquareModuleDrawer()
 		}
 	}
-	
+
+	// Create image
+	imgSize := qr.Size*moduleSize + 2*quietZone
+	img := image.NewRGBA(image.Rect(0, 0, imgSize, imgSize))
+
+	// Fill background
+	draw.Draw(img, img.Bounds(), &image.Uniform{config.BackgroundColor}, image.Point{}, draw.Src)
+
+	// Initialize the module drawer
+	drawer.Initialize(img, config)
+
+	// Draw QR modules using the module drawer
+	for y := 0; y < qr.Size; y++ {
+		for x := 0; x < qr.Size; x++ {
+			imgX := quietZone + x*moduleSize
+			imgY := quietZone + y*moduleSize
+
+			// Create box coordinates [x1, y1, x2, y2]
+			box := [4]int{imgX, imgY, imgX + moduleSize, imgY + moduleSize}
+
+			// Get neighbor context if the drawer needs it
+			var neighbors *ActiveWithNeighbors
+			if drawer.NeedsNeighbors() {
+				if IsFinderPattern(y, x, qr.Size) {
+					neighbors = GetFinderPatternNeighbors(qr.Matrix, y, x)
+				} else {
+					neighbors = GetModuleNeighbors(qr.Matrix, y, x)
+				}
+			}
+
+			// Draw the module
+			drawer.DrawModule(box, qr.Matrix[y][x], neighbors)
+		}
+	}
+
 	// Draw logo if present
 	if qr.Logo != nil && qr.LogoSize > 0 {
 		placement := calculateLogoPlacement(&Matrix{Size: qr.Size}, qr.LogoSize)
 		drawLogo(img, qr.Logo, placement, moduleSize, quietZone)
 	}
-	
+
 	return img, nil
 }
 
@@ -93,20 +112,20 @@ func drawCircle(img *image.RGBA, x, y, size int, color color.Color) {
 
 func drawRoundedModule(img *image.RGBA, x, y, size int, color color.Color) {
 	cornerRadius := float64(size) / 4
-	
+
 	for py := y; py < y+size; py++ {
 		for px := x; px < x+size; px++ {
 			relX := float64(px - x)
 			relY := float64(py - y)
-			
+
 			// Check if pixel is in rounded corner area
 			inCorner := false
-			
+
 			// Top-left corner
 			if relX < cornerRadius && relY < cornerRadius {
 				dx := relX - cornerRadius
 				dy := relY - cornerRadius
-				if dx*dx + dy*dy > cornerRadius*cornerRadius {
+				if dx*dx+dy*dy > cornerRadius*cornerRadius {
 					inCorner = true
 				}
 			}
@@ -114,7 +133,7 @@ func drawRoundedModule(img *image.RGBA, x, y, size int, color color.Color) {
 			if relX >= float64(size)-cornerRadius && relY < cornerRadius {
 				dx := relX - (float64(size) - cornerRadius)
 				dy := relY - cornerRadius
-				if dx*dx + dy*dy > cornerRadius*cornerRadius {
+				if dx*dx+dy*dy > cornerRadius*cornerRadius {
 					inCorner = true
 				}
 			}
@@ -122,7 +141,7 @@ func drawRoundedModule(img *image.RGBA, x, y, size int, color color.Color) {
 			if relX < cornerRadius && relY >= float64(size)-cornerRadius {
 				dx := relX - cornerRadius
 				dy := relY - (float64(size) - cornerRadius)
-				if dx*dx + dy*dy > cornerRadius*cornerRadius {
+				if dx*dx+dy*dy > cornerRadius*cornerRadius {
 					inCorner = true
 				}
 			}
@@ -130,11 +149,11 @@ func drawRoundedModule(img *image.RGBA, x, y, size int, color color.Color) {
 			if relX >= float64(size)-cornerRadius && relY >= float64(size)-cornerRadius {
 				dx := relX - (float64(size) - cornerRadius)
 				dy := relY - (float64(size) - cornerRadius)
-				if dx*dx + dy*dy > cornerRadius*cornerRadius {
+				if dx*dx+dy*dy > cornerRadius*cornerRadius {
 					inCorner = true
 				}
 			}
-			
+
 			if !inCorner {
 				img.Set(px, py, color)
 			}
@@ -158,7 +177,7 @@ func drawRoundedFinderPattern(img *image.RGBA, x, y, moduleSize int, color color
 		localX = qrX
 		localY = qrY - (qrSize - 7)
 	}
-	
+
 	// Draw with enhanced rounding for finder patterns
 	if (localX == 0 || localX == 6) || (localY == 0 || localY == 6) {
 		drawRoundedModule(img, x, y, moduleSize, color)
@@ -172,13 +191,13 @@ func drawRoundedFinderPattern(img *image.RGBA, x, y, moduleSize int, color color
 func drawLogo(img *image.RGBA, logo image.Image, placement LogoPlacement, moduleSize, quietZone int) {
 	logoWidth := placement.Width * moduleSize
 	logoHeight := placement.Height * moduleSize
-	
+
 	logoX := quietZone + placement.X*moduleSize
 	logoY := quietZone + placement.Y*moduleSize
-	
+
 	// Scale logo to fit
 	logoRect := image.Rect(logoX, logoY, logoX+logoWidth, logoY+logoHeight)
-	
+
 	// Use bilinear scaling for better quality
 	xdraw.BiLinear.Scale(img, logoRect, logo, logo.Bounds(), xdraw.Src, nil)
 }

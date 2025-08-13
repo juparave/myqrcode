@@ -60,10 +60,10 @@ func TestDebugQRGeneration(t *testing.T) {
 
 	// Generate basic readable version
 	config := StyleConfig{
-		ModuleSize: 15,
-		QuietZone:  60,
+		ModuleSize:     15,
+		QuietZone:      60,
 		RoundedCorners: false,
-		CircularDots: false,
+		CircularDots:   false,
 	}
 
 	img, err := qr.ToImage(config)
@@ -79,7 +79,7 @@ func TestDebugQRGeneration(t *testing.T) {
 func TestCompareKnownGoodQR(t *testing.T) {
 	// Test our implementation against expected behavior
 	data := "TEST123"
-	
+
 	qr, err := New(data, Medium)
 	if err != nil {
 		t.Fatalf("Failed to create QR: %v", err)
@@ -93,7 +93,7 @@ func TestCompareKnownGoodQR(t *testing.T) {
 	// Print matrix for manual inspection
 	t.Logf("QR Matrix for '%s':", data)
 	t.Logf("Version: %d, Size: %dx%d", qr.Version, qr.Size, qr.Size)
-	
+
 	// Print first few rows to see structure
 	for i := 0; i < min(10, qr.Size); i++ {
 		row := ""
@@ -115,7 +115,7 @@ func TestDataEncodingOnly(t *testing.T) {
 		mode EncodingMode
 	}{
 		{"123", Numeric},
-		{"ABC", Alphanumeric}, 
+		{"ABC", Alphanumeric},
 		{"hello", Byte},
 	}
 
@@ -127,7 +127,7 @@ func TestDataEncodingOnly(t *testing.T) {
 			}
 
 			t.Logf("Data: %s, Mode: %d, Encoded bits: %d", tc.data, tc.mode, len(encoded))
-			
+
 			// Show first few bits
 			bits := ""
 			for i := 0; i < min(32, len(encoded)); i++ {
@@ -144,7 +144,7 @@ func visualizeMatrix(matrix [][]bool, size int) image.Image {
 	// Create a simple black/white visualization of the matrix
 	scale := 5
 	img := image.NewRGBA(image.Rect(0, 0, size*scale, size*scale))
-	
+
 	for y := 0; y < size; y++ {
 		for x := 0; x < size; x++ {
 			var c color.Color
@@ -153,7 +153,7 @@ func visualizeMatrix(matrix [][]bool, size int) image.Image {
 			} else {
 				c = color.RGBA{255, 255, 255, 255}
 			}
-			
+
 			for dy := 0; dy < scale; dy++ {
 				for dx := 0; dx < scale; dx++ {
 					img.Set(x*scale+dx, y*scale+dy, c)
@@ -161,7 +161,7 @@ func visualizeMatrix(matrix [][]bool, size int) image.Image {
 			}
 		}
 	}
-	
+
 	return img
 }
 

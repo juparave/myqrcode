@@ -44,12 +44,12 @@ func TestChromeStyleRendering(t *testing.T) {
 
 	// Test Chrome-style configuration
 	config := StyleConfig{
-		ModuleSize:       8,
-		QuietZone:        32,
-		RoundedCorners:   true,
-		CircularDots:     true,
-		BackgroundColor:  color.RGBA{255, 255, 255, 255},
-		ForegroundColor:  color.RGBA{0, 0, 0, 255},
+		ModuleSize:      8,
+		QuietZone:       32,
+		RoundedCorners:  true,
+		CircularDots:    true,
+		BackgroundColor: color.RGBA{255, 255, 255, 255},
+		ForegroundColor: color.RGBA{0, 0, 0, 255},
 	}
 
 	img, err := qr.ToImage(config)
@@ -116,7 +116,7 @@ func TestVariousDataSizes(t *testing.T) {
 				t.Fatalf("Failed to encode QR code for %s: %v", tc.name, err)
 			}
 
-			t.Logf("%s: Version %d, Size %dx%d, Mode %d", 
+			t.Logf("%s: Version %d, Size %dx%d, Mode %d",
 				tc.name, qr.Version, qr.Size, qr.Size, qr.Mode)
 		})
 	}
@@ -168,7 +168,7 @@ func TestLogoSizeAdjustment(t *testing.T) {
 
 			// Larger logos should increase error correction level
 			if size >= 20 && qr.ErrorCorrection <= originalLevel {
-				t.Logf("Logo size %d%% adjusted error correction from %d to %d", 
+				t.Logf("Logo size %d%% adjusted error correction from %d to %d",
 					size, originalLevel, qr.ErrorCorrection)
 			}
 		})
@@ -243,7 +243,7 @@ func createDinosaurLogo() image.Image {
 func createSimpleLogo() image.Image {
 	size := 32
 	img := image.NewRGBA(image.Rect(0, 0, size, size))
-	
+
 	// Create a simple circle logo
 	center := float64(size) / 2
 	radius := float64(size) / 3
@@ -257,6 +257,6 @@ func createSimpleLogo() image.Image {
 			}
 		}
 	}
-	
+
 	return img
 }

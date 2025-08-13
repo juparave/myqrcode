@@ -48,7 +48,7 @@ func (m *Matrix) IsReserved(x, y int) bool {
 
 func (m *Matrix) AddFinderPatterns() {
 	positions := [][2]int{{0, 0}, {m.Size - 7, 0}, {0, m.Size - 7}}
-	
+
 	for _, pos := range positions {
 		m.addFinderPattern(pos[0], pos[1])
 	}
@@ -64,14 +64,14 @@ func (m *Matrix) addFinderPattern(x, y int) {
 		{true, false, false, false, false, false, true},
 		{true, true, true, true, true, true, true},
 	}
-	
+
 	for dy := 0; dy < 7; dy++ {
 		for dx := 0; dx < 7; dx++ {
 			m.Set(x+dx, y+dy, pattern[dy][dx])
 			m.SetReserved(x+dx, y+dy)
 		}
 	}
-	
+
 	for dy := -1; dy <= 7; dy++ {
 		for dx := -1; dx <= 7; dx++ {
 			if dx == -1 || dx == 7 || dy == -1 || dy == 7 {
@@ -104,11 +104,11 @@ func (m *Matrix) AddDarkModule() {
 
 func (m *Matrix) AddFormatInfo(level ErrorCorrectionLevel, maskPattern int) {
 	formatBits := getFormatBits(level, maskPattern)
-	
+
 	for i := 0; i < 15; i++ {
 		bit := (formatBits >> i) & 1
 		value := bit == 1
-		
+
 		if i < 6 {
 			m.Set(8, i, value)
 			m.SetReserved(8, i)
@@ -123,11 +123,11 @@ func (m *Matrix) AddFormatInfo(level ErrorCorrectionLevel, maskPattern int) {
 			m.SetReserved(14-i, 8)
 		}
 	}
-	
+
 	for i := 0; i < 15; i++ {
 		bit := (formatBits >> i) & 1
 		value := bit == 1
-		
+
 		if i < 8 {
 			m.Set(m.Size-1-i, 8, value)
 			m.SetReserved(m.Size-1-i, 8)
@@ -149,10 +149,10 @@ func getFormatBits(level ErrorCorrectionLevel, maskPattern int) int {
 		"H0": 0x1689, "H1": 0x13BE, "H2": 0x1CE7, "H3": 0x19D0,
 		"H4": 0x0762, "H5": 0x0255, "H6": 0x0D0C, "H7": 0x083B,
 	}
-	
+
 	levelChars := []string{"L", "M", "Q", "H"}
 	key := levelChars[level] + string(rune('0'+maskPattern))
-	
+
 	if val, ok := formatTable[key]; ok {
 		return val
 	}

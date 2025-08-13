@@ -8,11 +8,11 @@ type LogoPlacement struct {
 
 func calculateLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 	size := matrix.Size
-	
+
 	// Calculate logo dimensions based on percentage of QR size
 	logoWidth := (size * logoSize) / 100
 	logoHeight := logoWidth
-	
+
 	// Ensure logo size is odd for better centering
 	if logoWidth%2 == 0 {
 		logoWidth++
@@ -20,11 +20,11 @@ func calculateLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 	if logoHeight%2 == 0 {
 		logoHeight++
 	}
-	
+
 	// Center the logo
 	x := (size - logoWidth) / 2
 	y := (size - logoHeight) / 2
-	
+
 	return LogoPlacement{
 		X:      x,
 		Y:      y,
@@ -40,40 +40,40 @@ func isLogoArea(x, y int, placement LogoPlacement) bool {
 
 func isCriticalArea(x, y, size int) bool {
 	// Finder patterns (corners)
-	if (x < 9 && y < 9) ||                    // Top-left
-		(x >= size-8 && y < 9) ||             // Top-right  
-		(x < 9 && y >= size-8) {              // Bottom-left
+	if (x < 9 && y < 9) || // Top-left
+		(x >= size-8 && y < 9) || // Top-right
+		(x < 9 && y >= size-8) { // Bottom-left
 		return true
 	}
-	
+
 	// Timing patterns
 	if x == 6 || y == 6 {
 		return true
 	}
-	
+
 	// Dark module
 	if x == 8 && y == 4*((size-17)/4)+9 {
 		return true
 	}
-	
+
 	// Format information areas
 	if (x == 8 && (y < 9 || y >= size-8)) ||
 		(y == 8 && (x < 9 || x >= size-7)) {
 		return true
 	}
-	
+
 	return false
 }
 
 func optimizeLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 	placement := calculateLogoPlacement(matrix, logoSize)
 	size := matrix.Size
-	
+
 	// Adjust placement to avoid critical areas if possible
 	maxOffset := 3
 	bestPlacement := placement
 	minCriticalOverlap := countCriticalOverlap(placement, size)
-	
+
 	for offsetX := -maxOffset; offsetX <= maxOffset; offsetX++ {
 		for offsetY := -maxOffset; offsetY <= maxOffset; offsetY++ {
 			newPlacement := LogoPlacement{
@@ -82,12 +82,12 @@ func optimizeLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 				Width:  placement.Width,
 				Height: placement.Height,
 			}
-			
+
 			// Check if placement is within bounds
 			if newPlacement.X >= 0 && newPlacement.Y >= 0 &&
 				newPlacement.X+newPlacement.Width <= size &&
 				newPlacement.Y+newPlacement.Height <= size {
-				
+
 				criticalOverlap := countCriticalOverlap(newPlacement, size)
 				if criticalOverlap < minCriticalOverlap {
 					minCriticalOverlap = criticalOverlap
@@ -96,7 +96,7 @@ func optimizeLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 			}
 		}
 	}
-	
+
 	return bestPlacement
 }
 
@@ -114,38 +114,42 @@ func countCriticalOverlap(placement LogoPlacement, size int) int {
 
 func calculateLogoErrorCorrection(placement LogoPlacement, version int, level ErrorCorrectionLevel) float64 {
 	logoArea := placement.Width * placement.Height
-	
+
 	// Get total data codewords for the current version and error correction level
 	versionInfo := getVersionInfo(version)
-	totalCodewords := versionInfo.DataCodewords[level]
+	// Calculate total data codewords by summing all block groups for this error correction level
+	totalCodewords := 0
+	for _, blockGroup := range versionInfo.ECBlockInfo[level] {
+		totalCodewords += blockGroup.NumBlocks * blockGroup.DataCodewords
+	}
 	totalDataBits := totalCodewords * 8
 
 	// Calculate the number of bits obscured by the logo
 	// This is an approximation, as it doesn't account for non-data areas covered by the logo
-	obscuredBits := logoArea 
+	obscuredBits := logoArea
 
 	// Calculate the percentage of data that will be obscured
 	obscuredPercentage := float64(obscuredBits) / float64(totalDataBits)
-	
+
 	// Add a safety margin
 	requiredCorrection := obscuredPercentage * 1.2
-	
+
 	return requiredCorrection
 }
 
 func adjustErrorCorrectionForLogo(level ErrorCorrectionLevel, placement LogoPlacement, version int) ErrorCorrectionLevel {
 	requiredCorrection := calculateLogoErrorCorrection(placement, version, level)
-	
+
 	// Map correction percentages to levels
 	// Low: ~7%, Medium: ~15%, Quartile: ~25%, High: ~30%
 	if requiredCorrection > 0.25 {
 		return High
 	} else if requiredCorrection > 0.15 {
-		return Quartile  
+		return Quartile
 	} else if requiredCorrection > 0.07 {
 		return Medium
 	}
-	
+
 	return level // Keep original if no adjustment needed
 }
 
