@@ -168,6 +168,32 @@ func ChromeFinderPatternStyleConfig() StyleConfig {
 	}
 }
 
+// ChromeGappedStyleConfig returns the most accurate Chrome QR style with gapped circles
+func ChromeGappedStyleConfig() StyleConfig {
+	return StyleConfig{
+		ModuleSize:      10,
+		QuietZone:       4,
+		RoundedCorners:  false,
+		CircularDots:    false,
+		BackgroundColor: color.RGBA{255, 255, 255, 255}, // White
+		ForegroundColor: color.RGBA{0, 0, 0, 255},       // Black
+		ModuleDrawer:    NewGappedCircleModuleDrawer(0.87), // Chrome-like ratio
+	}
+}
+
+// ChromeGappedStyleConfigWithRatio returns Chrome gapped style with custom ratio
+func ChromeGappedStyleConfigWithRatio(ratio float64) StyleConfig {
+	return StyleConfig{
+		ModuleSize:      10,
+		QuietZone:       4,
+		RoundedCorners:  false,
+		CircularDots:    false,
+		BackgroundColor: color.RGBA{255, 255, 255, 255}, // White
+		ForegroundColor: color.RGBA{0, 0, 0, 255},       // Black
+		ModuleDrawer:    NewGappedCircleModuleDrawer(ratio),
+	}
+}
+
 // Make is a convenience function for one-line QR code generation
 func Make(data string, options ...func(*StyleConfig)) (image.Image, error) {
 	qr, err := New(data, High)

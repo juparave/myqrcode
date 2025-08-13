@@ -33,16 +33,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Configure Chrome-style rendering with circular dots using new module drawer system
-	config := myqrcode.StyleConfig{
-		ModuleSize:       10,
-		QuietZone:        4,
-		RoundedCorners:   true,
-		CircularDots:     true,
-		BackgroundColor:  myqrcode.DefaultStyleConfig().BackgroundColor,
-		ForegroundColor:  myqrcode.DefaultStyleConfig().ForegroundColor,
-		ModuleDrawer:     myqrcode.NewCircleModuleDrawer(), // Use the new circular module drawer
-	}
+	// Configure Chrome-style rendering with improved gapped circles
+	config := myqrcode.ChromeGappedStyleConfig() // Use the new Chrome gapped style
 
 	// Generate the image
 	img, err := qr.ToImage(config)

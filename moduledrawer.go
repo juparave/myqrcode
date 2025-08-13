@@ -119,6 +119,55 @@ func resizeImage(src *image.RGBA, targetSize int) *image.RGBA {
 	return dst
 }
 
+// resizeImageHighQuality provides higher quality resizing similar to Python's Lanczos
+func resizeImageHighQuality(src *image.RGBA, targetSize int) *image.RGBA {
+	srcBounds := src.Bounds()
+	dst := image.NewRGBA(image.Rect(0, 0, targetSize, targetSize))
+	
+	// Use a higher quality interpolation approach
+	scaleX := float64(srcBounds.Dx()) / float64(targetSize)
+	scaleY := float64(srcBounds.Dy()) / float64(targetSize)
+	
+	for y := 0; y < targetSize; y++ {
+		for x := 0; x < targetSize; x++ {
+			// Use more sophisticated sampling for better quality
+			srcX := float64(x) * scaleX
+			srcY := float64(y) * scaleY
+			
+			// Sample multiple points for better anti-aliasing (mimics Lanczos approach)
+			var totalR, totalG, totalB, totalA float64
+			var samples int
+			
+			for dy := -0.5; dy <= 0.5; dy += 0.25 {
+				for dx := -0.5; dx <= 0.5; dx += 0.25 {
+					sampleX := int(srcX + dx)
+					sampleY := int(srcY + dy)
+					
+					if sampleX >= 0 && sampleX < srcBounds.Dx() && sampleY >= 0 && sampleY < srcBounds.Dy() {
+						c := src.RGBAAt(sampleX, sampleY)
+						totalR += float64(c.R)
+						totalG += float64(c.G)
+						totalB += float64(c.B)
+						totalA += float64(c.A)
+						samples++
+					}
+				}
+			}
+			
+			if samples > 0 {
+				dst.Set(x, y, color.RGBA{
+					uint8(totalR / float64(samples)),
+					uint8(totalG / float64(samples)),
+					uint8(totalB / float64(samples)),
+					uint8(totalA / float64(samples)),
+				})
+			}
+		}
+	}
+	
+	return dst
+}
+
 // SquareModuleDrawer draws basic square modules
 type SquareModuleDrawer struct {
 	BaseModuleDrawer
@@ -242,16 +291,16 @@ func (g *GappedCircleModuleDrawer) Initialize(img *image.RGBA, config StyleConfi
 
 func (g *GappedCircleModuleDrawer) createGappedCircle() {
 	size := g.config.ModuleSize
-	actualSize := int(float64(size) * g.SizeRatio)
-
-	bigImg := createAntialiasingImage(actualSize, g.config.BackgroundColor)
-	bigSize := actualSize * AntialiasingFactor
+	
+	// Step 1: Create full-size anti-aliased circle (like Python's approach)
+	bigImg := createAntialiasingImage(size, g.config.BackgroundColor)
+	bigSize := size * AntialiasingFactor
 	center := float64(bigSize) / 2
 	radius := center
 
 	fgColor := color.RGBAModel.Convert(g.config.ForegroundColor).(color.RGBA)
 
-	// Draw anti-aliased circle
+	// Draw full anti-aliased circle
 	for y := 0; y < bigSize; y++ {
 		for x := 0; x < bigSize; x++ {
 			dx := float64(x) - center + 0.5
@@ -264,7 +313,12 @@ func (g *GappedCircleModuleDrawer) createGappedCircle() {
 		}
 	}
 
-	g.circle = resizeImage(bigImg, actualSize)
+	// Step 2: Resize to full module size first (preserves anti-aliasing)
+	fullSizeCircle := resizeImage(bigImg, size)
+	
+	// Step 3: Resize again to the gapped size (like Python's single resize)
+	actualSize := int(float64(size) * g.SizeRatio)
+	g.circle = resizeImageHighQuality(fullSizeCircle, actualSize)
 }
 
 func (g *GappedCircleModuleDrawer) DrawModule(box [4]int, isActive bool, neighbors *ActiveWithNeighbors) {
@@ -272,9 +326,11 @@ func (g *GappedCircleModuleDrawer) DrawModule(box [4]int, isActive bool, neighbo
 		return
 	}
 
-	// Calculate centered position for smaller circle
-	width := box[2] - box[0]
+	// Use Python's approach: simple top-left positioning (like paste)
 	actualSize := g.circle.Bounds().Dx()
+	
+	// Center the circle within the module box
+	width := box[2] - box[0]
 	offset := (width - actualSize) / 2
 
 	dst := image.Rect(
