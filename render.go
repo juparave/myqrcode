@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"math"
 
 	xdraw "golang.org/x/image/draw"
 )
@@ -87,21 +86,9 @@ func isFinderPattern(x, y, size int) bool {
 }
 
 func drawCircle(img *image.RGBA, x, y, size int, color color.Color) {
-	radius := float64(size) / 2
-	centerX := float64(x) + radius
-	centerY := float64(y) + radius
-	
-	for py := y; py < y+size; py++ {
-		for px := x; px < x+size; px++ {
-			dx := float64(px) + 0.5 - centerX
-			dy := float64(py) + 0.5 - centerY
-			distance := math.Sqrt(dx*dx + dy*dy)
-			
-			if distance <= radius {
-				img.Set(px, py, color)
-			}
-		}
-	}
+	//-FIX--: Draw a simple square instead of a circle for better readability
+	rect := image.Rect(x, y, x+size, y+size)
+	draw.Draw(img, rect, &image.Uniform{color}, image.Point{}, draw.Src)
 }
 
 func drawRoundedModule(img *image.RGBA, x, y, size int, color color.Color) {

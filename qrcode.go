@@ -79,7 +79,7 @@ func (qr *QRCode) Encode() error {
 		qr.Size = versionInfo.Size
 		
 		placement := optimizeLogoPlacement(&Matrix{Size: qr.Size}, qr.LogoSize)
-		qr.ErrorCorrection = adjustErrorCorrectionForLogo(qr.ErrorCorrection, placement, len(qr.Data))
+		qr.ErrorCorrection = adjustErrorCorrectionForLogo(qr.ErrorCorrection, placement, qr.Version)
 	}
 	
 	// Get version info

@@ -1,9 +1,5 @@
 package myqrcode
 
-import (
-	"math"
-)
-
 type LogoPlacement struct {
 	X, Y   int
 	Width  int
@@ -116,26 +112,29 @@ func countCriticalOverlap(placement LogoPlacement, size int) int {
 	return count
 }
 
-func calculateLogoErrorCorrection(placement LogoPlacement, totalDataBits int) float64 {
+func calculateLogoErrorCorrection(placement LogoPlacement, version int, level ErrorCorrectionLevel) float64 {
 	logoArea := placement.Width * placement.Height
-	totalArea := int(math.Pow(float64(placement.Width+placement.Height), 2)) // Approximate QR area
 	
-	// Estimate percentage of data that will be obscured
-	obscuredPercentage := float64(logoArea) / float64(totalArea)
+	// Get total data codewords for the current version and error correction level
+	versionInfo := getVersionInfo(version)
+	totalCodewords := versionInfo.DataCodewords[level]
+	totalDataBits := totalCodewords * 8
+
+	// Calculate the number of bits obscured by the logo
+	// This is an approximation, as it doesn't account for non-data areas covered by the logo
+	obscuredBits := logoArea 
+
+	// Calculate the percentage of data that will be obscured
+	obscuredPercentage := float64(obscuredBits) / float64(totalDataBits)
 	
-	// Add safety margin
-	requiredCorrection := obscuredPercentage * 1.5
-	
-	// Ensure we don't exceed maximum error correction capability
-	if requiredCorrection > 0.30 { // QR High level is ~30%
-		requiredCorrection = 0.30
-	}
+	// Add a safety margin
+	requiredCorrection := obscuredPercentage * 1.2
 	
 	return requiredCorrection
 }
 
-func adjustErrorCorrectionForLogo(level ErrorCorrectionLevel, placement LogoPlacement, dataSize int) ErrorCorrectionLevel {
-	requiredCorrection := calculateLogoErrorCorrection(placement, dataSize*8)
+func adjustErrorCorrectionForLogo(level ErrorCorrectionLevel, placement LogoPlacement, version int) ErrorCorrectionLevel {
+	requiredCorrection := calculateLogoErrorCorrection(placement, version, level)
 	
 	// Map correction percentages to levels
 	// Low: ~7%, Medium: ~15%, Quartile: ~25%, High: ~30%
