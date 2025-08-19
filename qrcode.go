@@ -79,7 +79,7 @@ func (qr *QRCode) Encode() error {
 		versionInfo := getVersionInfo(qr.Version)
 		qr.Size = versionInfo.Size
 
-		placement := optimizeLogoPlacement(&Matrix{Size: qr.Size}, qr.LogoSize)
+		placement := optimizeLogoPlacement(&Matrix{Size: qr.Size}, qr.LogoSize, qr.Version)
 		qr.ErrorCorrection = adjustErrorCorrectionForLogo(qr.ErrorCorrection, placement, qr.Version)
 	}
 
@@ -107,7 +107,7 @@ func (qr *QRCode) Encode() error {
 
 	// Reserve logo area if present
 	if qr.Logo != nil && qr.LogoSize > 0 {
-		placement := optimizeLogoPlacement(matrix, qr.LogoSize)
+		placement := optimizeLogoPlacement(matrix, qr.LogoSize, qr.Version)
 		reserveLogoArea(matrix, placement)
 	}
 
@@ -177,7 +177,7 @@ func ChromeGappedStyleConfig() StyleConfig {
 		CircularDots:    false,
 		BackgroundColor: color.RGBA{255, 255, 255, 255}, // White
 		ForegroundColor: color.RGBA{0, 0, 0, 255},       // Black
-		ModuleDrawer:    NewGappedCircleModuleDrawer(0.87), // Chrome-like ratio
+		ModuleDrawer:    NewGappedCircleModuleDrawer(0.95), // Increased ratio for readability
 	}
 }
 

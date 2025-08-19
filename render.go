@@ -33,15 +33,16 @@ func (qr *QRCode) ToImage(config StyleConfig) (image.Image, error) {
 		config.ForegroundColor = color.RGBA{0, 0, 0, 255}
 	}
 
-	// Set default module drawer if not provided
-	drawer := config.ModuleDrawer
-	if drawer == nil {
+	// Create two drawers: one for finder patterns, one for data modules
+	squareDrawer := NewSquareModuleDrawer()
+	dataDrawer := config.ModuleDrawer
+	if dataDrawer == nil {
 		if config.CircularDots {
-			drawer = NewCircleModuleDrawer()
+			dataDrawer = NewCircleModuleDrawer()
 		} else if config.RoundedCorners {
-			drawer = NewRoundedModuleDrawer(1.0)
+			dataDrawer = NewRoundedModuleDrawer(1.0)
 		} else {
-			drawer = NewSquareModuleDrawer()
+			dataDrawer = NewSquareModuleDrawer()
 		}
 	}
 
@@ -52,10 +53,11 @@ func (qr *QRCode) ToImage(config StyleConfig) (image.Image, error) {
 	// Fill background
 	draw.Draw(img, img.Bounds(), &image.Uniform{config.BackgroundColor}, image.Point{}, draw.Src)
 
-	// Initialize the module drawer
-	drawer.Initialize(img, config)
+	// Initialize the drawers
+	squareDrawer.Initialize(img, config)
+	dataDrawer.Initialize(img, config)
 
-	// Draw QR modules using the module drawer
+	// Draw QR modules using the appropriate drawer
 	for y := 0; y < qr.Size; y++ {
 		for x := 0; x < qr.Size; x++ {
 			imgX := quietZone + x*moduleSize
@@ -63,6 +65,14 @@ func (qr *QRCode) ToImage(config StyleConfig) (image.Image, error) {
 
 			// Create box coordinates [x1, y1, x2, y2]
 			box := [4]int{imgX, imgY, imgX + moduleSize, imgY + moduleSize}
+
+			// Choose the drawer based on whether it's a finder pattern
+			var drawer ModuleDrawer
+			if isFinderPattern(x, y, qr.Size) {
+				drawer = squareDrawer
+			} else {
+				drawer = dataDrawer
+			}
 
 			// Get neighbor context if the drawer needs it
 			var neighbors *ActiveWithNeighbors

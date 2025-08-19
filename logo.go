@@ -38,7 +38,7 @@ func isLogoArea(x, y int, placement LogoPlacement) bool {
 		y >= placement.Y && y < placement.Y+placement.Height
 }
 
-func isCriticalArea(x, y, size int) bool {
+func isCriticalArea(x, y, size, version int) bool {
 	// Finder patterns (corners)
 	if (x < 9 && y < 9) || // Top-left
 		(x >= size-8 && y < 9) || // Top-right
@@ -52,7 +52,9 @@ func isCriticalArea(x, y, size int) bool {
 	}
 
 	// Dark module
-	if x == 8 && y == 4*((size-17)/4)+9 {
+	darkModuleX := 8
+	darkModuleY := 4*version + 9
+	if x == darkModuleX && y == darkModuleY {
 		return true
 	}
 
@@ -65,14 +67,14 @@ func isCriticalArea(x, y, size int) bool {
 	return false
 }
 
-func optimizeLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
+func optimizeLogoPlacement(matrix *Matrix, logoSize, version int) LogoPlacement {
 	placement := calculateLogoPlacement(matrix, logoSize)
 	size := matrix.Size
 
 	// Adjust placement to avoid critical areas if possible
 	maxOffset := 3
 	bestPlacement := placement
-	minCriticalOverlap := countCriticalOverlap(placement, size)
+	minCriticalOverlap := countCriticalOverlap(placement, size, version)
 
 	for offsetX := -maxOffset; offsetX <= maxOffset; offsetX++ {
 		for offsetY := -maxOffset; offsetY <= maxOffset; offsetY++ {
@@ -88,7 +90,7 @@ func optimizeLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 				newPlacement.X+newPlacement.Width <= size &&
 				newPlacement.Y+newPlacement.Height <= size {
 
-				criticalOverlap := countCriticalOverlap(newPlacement, size)
+				criticalOverlap := countCriticalOverlap(newPlacement, size, version)
 				if criticalOverlap < minCriticalOverlap {
 					minCriticalOverlap = criticalOverlap
 					bestPlacement = newPlacement
@@ -100,11 +102,11 @@ func optimizeLogoPlacement(matrix *Matrix, logoSize int) LogoPlacement {
 	return bestPlacement
 }
 
-func countCriticalOverlap(placement LogoPlacement, size int) int {
+func countCriticalOverlap(placement LogoPlacement, size, version int) int {
 	count := 0
 	for y := placement.Y; y < placement.Y+placement.Height; y++ {
 		for x := placement.X; x < placement.X+placement.Width; x++ {
-			if isCriticalArea(x, y, size) {
+			if isCriticalArea(x, y, size, version) {
 				count++
 			}
 		}
